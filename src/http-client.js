@@ -3,8 +3,7 @@ import zip from 'lodash.zipobject'
 
 import 'isomorphic-fetch'
 
-const BASE = 'https://api.binance.com'
-const FUTURES = 'https://fapi.binance.com'
+const BASE = 'https://api.binance.us'
 
 const defaultGetTime = () => Date.now()
 
@@ -32,7 +31,7 @@ const sendResult = call =>
     // For API errors the response will be valid JSON,but for proxy errors
     // it will be HTML
     return res.text().then(text => {
-      let error;
+      let error
       try {
         const json = JSON.parse(text)
         // The body was JSON parseable, assume it is an API response error
@@ -74,9 +73,9 @@ const checkParams = (name, payload, requires = []) => {
  * @param {object} headers
  * @returns {object} The api response
  */
-const publicCall = ({ endpoints }) => (path, data, method = 'GET', headers = {}) =>
+const publicCall = ({ base }) => (path, data, method = 'GET', headers = {}) =>
   sendResult(
-    fetch(`${!path.includes('/fapi') ? endpoints.base : endpoints.futures}${path}${makeQueryString(data)}`, {
+    fetch(`${base}${path}${makeQueryString(data)}`, {
       method,
       json: true,
       headers,
@@ -110,7 +109,7 @@ const keyCall = ({ apiKey, pubCall }) => (path, data, method = 'GET') => {
  * @param {object} headers
  * @returns {object} The api response
  */
-const privateCall = ({ apiKey, apiSecret, endpoints, getTime = defaultGetTime, pubCall }) => (
+const privateCall = ({ apiKey, apiSecret, base, getTime = defaultGetTime, pubCall }) => (
   path,
   data = {},
   method = 'GET',
@@ -137,16 +136,11 @@ const privateCall = ({ apiKey, apiSecret, endpoints, getTime = defaultGetTime, p
     const newData = noExtra ? data : { ...data, timestamp, signature }
 
     return sendResult(
-      fetch(
-        `${!path.includes('/fapi') ? endpoints.base : endpoints.futures}${path}${noData
-          ? ''
-          : makeQueryString(newData)}`,
-        {
-          method,
-          headers: { 'X-MBX-APIKEY': apiKey },
-          json: true,
-        },
-      ),
+      fetch(`${base}${path}${noData ? '' : makeQueryString(newData)}`, {
+        method,
+        headers: { 'X-MBX-APIKEY': apiKey },
+        json: true,
+      }),
     )
   })
 }
@@ -217,13 +211,9 @@ const aggTrades = (pubCall, payload) =>
   )
 
 export default opts => {
-  const endpoints = {
-    'base': opts && opts.httpBase || BASE,
-    'futures': opts && opts.httpFutures || FUTURES,
-  }
-
-  const pubCall = publicCall({ ...opts, endpoints })
-  const privCall = privateCall({ ...opts, endpoints, pubCall })
+  const base = (opts && opts.httpBase) || BASE
+  const pubCall = publicCall({ ...opts, base })
+  const privCall = privateCall({ ...opts, base, pubCall })
   const kCall = keyCall({ ...opts, pubCall })
 
   return {
@@ -238,7 +228,8 @@ export default opts => {
     trades: payload =>
       checkParams('trades', payload, ['symbol']) && pubCall('/api/v1/trades', payload),
     tradesHistory: payload =>
-      checkParams('tradesHitory', payload, ['symbol']) && kCall('/api/v1/historicalTrades', payload),
+      checkParams('tradesHitory', payload, ['symbol']) &&
+      kCall('/api/v1/historicalTrades', payload),
 
     dailyStats: payload => pubCall('/api/v1/ticker/24hr', payload),
     prices: () =>
@@ -284,20 +275,5 @@ export default opts => {
     getDataStream: () => privCall('/api/v1/userDataStream', null, 'POST', true),
     keepDataStream: payload => privCall('/api/v1/userDataStream', payload, 'PUT', false, true),
     closeDataStream: payload => privCall('/api/v1/userDataStream', payload, 'DELETE', false, true),
-
-    marginGetDataStream: () => privCall('/sapi/v1/userDataStream', null, 'POST', true),
-    marginKeepDataStream: payload => privCall('/sapi/v1/userDataStream', payload, 'PUT', false, true),
-    marginCloseDataStream: payload => privCall('/sapi/v1/userDataStream', payload, 'DELETE', false, true),
-
-    futuresGetDataStream: () => privCall('/fapi/v1/listenKey', null, 'POST', true),
-    futuresKeepDataStream: payload => privCall('/fapi/v1/listenKey', payload, 'PUT', false, true),
-    futuresCloseDataStream: payload => privCall('/fapi/v1/listenKey', payload, 'DELETE', false, true),
-
-    marginAllOrders: payload => privCall('/sapi/v1/margin/allOrders', payload),
-    marginOrder: payload => order(privCall, payload, '/sapi/v1/margin/order'),
-    marginCancelOrder: payload => privCall('/sapi/v1/margin/order', payload, 'DELETE'),
-    marginOpenOrders: payload => privCall('/sapi/v1/margin/openOrders', payload),
-    marginAccountInfo: payload => privCall('/sapi/v1/margin/account', payload),
-    marginMyTrades: payload => privCall('/sapi/v1/margin/myTrades', payload),
   }
 }

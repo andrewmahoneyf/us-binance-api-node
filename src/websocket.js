@@ -3,7 +3,7 @@ import zip from 'lodash.zipobject'
 import httpMethods from 'http-client'
 import openWebSocket from 'open-websocket'
 
-const BASE = 'wss://stream.binance.com:9443/ws'
+const BASE = 'wss://stream.binance.us:9443/ws'
 
 const depth = (payload, cb) => {
   const cache = (Array.isArray(payload) ? payload : [payload]).map(symbol => {
@@ -259,12 +259,8 @@ export const userEventHandler = cb => msg => {
 
 export const keepStreamAlive = (method, listenKey) => method({ listenKey })
 
-const user = (opts, margin) => cb => {
-  const methods = httpMethods(opts)
-
-  const getDataStream = margin ? methods.marginGetDataStream :  methods.getDataStream
-  const keepDataStream = margin ? methods.marginKeepDataStream : methods.keepDataStream
-  const closeDataStream = margin ? methods.marginCloseDataStream : methods.closeDataStream
+const user = opts => cb => {
+  const { getDataStream, keepDataStream, closeDataStream } = httpMethods(opts)
 
   let currentListenKey = null
   let int = null
@@ -334,5 +330,4 @@ export default opts => ({
   ticker,
   allTickers,
   user: user(opts),
-  marginUser: user(opts, true)
 })

@@ -1,9 +1,12 @@
 {
-  "name": "binance-api-node",
+  "name": "us-binance-api-node",
   "version": "0.9.10",
-  "description": "A node API wrapper for Binance",
+  "description": "A node API wrapper for US Binance",
   "main": "dist",
-  "files": ["dist", "index.d.ts"],
+  "files": [
+    "dist",
+    "index.d.ts"
+  ],
   "scripts": {
     "build": "rimraf dist && babel src -d dist",
     "prepare": "yarn build",
@@ -48,6 +51,6 @@
     ],
     "babel": "inherit"
   },
-  "author": "Balthazar Gronon <bgronon@gmail.com>",
+  "author": "Andrew Mahoney-Fernandes <andrew.mahoney.f@gmail.com>",
   "license": "MIT"
 }
